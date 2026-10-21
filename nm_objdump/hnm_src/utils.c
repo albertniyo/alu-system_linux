@@ -50,13 +50,14 @@ uint64_t s8(uint64_t v, int swp)
  * @b: ELF symbl binding property value parameter
  * @t: ELF symbl type structural description attribute type parameter
  * @idx: segment index pointer location map context offset metrics
- * @m: file map structural pointer anchor metric map context
- * Return: ASCII char symbol context flag character mapping
+ * @shflags: flags associated with the current symbol's section
+ * @shtype: type associated with the current symbol's section
+ * Return: ASCII char symbl context flag character mapping
  */
-char get_type(unsigned char b, unsigned char t, unsigned short idx, void *m)
+char get_type(unsigned char b, unsigned char t, unsigned short idx,
+	      uint64_t shflags, uint32_t shtype)
 {
 	char c = 'D';
-	(void)m;
 
 	if (b == STB_WEAK)
 	{
@@ -71,8 +72,14 @@ char get_type(unsigned char b, unsigned char t, unsigned short idx, void *m)
 		c = 'A';
 	else if (idx == SHN_COMMON)
 		c = 'C';
-	else if (t == STT_FUNC)
+	else if (shtype == SHT_NOBITS)
+		c = 'B';
+	else if (shflags & SHF_EXECINSTR)
 		c = 'T';
+	else if (!(shflags & SHF_WRITE) && (shflags & SHF_ALLOC))
+		c = 'R';
+	else if (!(shflags & SHF_ALLOC))
+		c = 'N';
 
 	if (b == STB_LOCAL && c != '?')
 		c += 32;

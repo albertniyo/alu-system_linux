@@ -5,14 +5,22 @@
  * @st: state config struct pointer
  * @sym: pointer to the 64-bit ELF symbl
  * @n: sybl name str
+ * @sh: section header reference array
  */
-void print_64(elf_s_t *st, Elf64_Sym *sym, char *n)
+void print_64(elf_s_t *st, Elf64_Sym *sym, char *n, Elf64_Shdr *sh)
 {
 	char tc;
+	uint16_t idx = s2(sym->st_shndx, st->swap);
+	uint64_t flg = 0;
+	uint32_t tp = 0;
 
+	if (idx < s2(((Elf64_Ehdr *)st->map)->e_shnum, st->swap))
+	{
+		flg = s8(sh[idx].sh_flags, st->swap);
+		tp = s4(sh[idx].sh_type, st->swap);
+	}
 	tc = get_type(ELF64_ST_BIND(sym->st_info),
-		      ELF64_ST_TYPE(sym->st_info),
-		      s2(sym->st_shndx, st->swap), st->map);
+		      ELF64_ST_TYPE(sym->st_info), idx, flg, tp);
 	if (tc == 'U' || tc == 'w' || tc == 'v')
 		printf("                 %c %s\n", tc, n);
 	else
@@ -25,14 +33,22 @@ void print_64(elf_s_t *st, Elf64_Sym *sym, char *n)
  * @st: state config struct pointer
  * @sym: pointer to the 32-bit ELF symbl
  * @n: symbl name str
+ * @sh: section header reference array
  */
-void print_32(elf_s_t *st, Elf32_Sym *sym, char *n)
+void print_32(elf_s_t *st, Elf32_Sym *sym, char *n, Elf32_Shdr *sh)
 {
 	char tc;
+	uint16_t idx = s2(sym->st_shndx, st->swap);
+	uint64_t flg = 0;
+	uint32_t tp = 0;
 
+	if (idx < s2(((Elf32_Ehdr *)st->map)->e_shnum, st->swap))
+	{
+		flg = s4(sh[idx].sh_flags, st->swap);
+		tp = s4(sh[idx].sh_type, st->swap);
+	}
 	tc = get_type(ELF32_ST_BIND(sym->st_info),
-		      ELF32_ST_TYPE(sym->st_info),
-		      s2(sym->st_shndx, st->swap), st->map);
+		      ELF32_ST_TYPE(sym->st_info), idx, flg, tp);
 	if (tc == 'U' || tc == 'w' || tc == 'v')
 		printf("         %c %s\n", tc, n);
 	else
@@ -47,8 +63,10 @@ void print_32(elf_s_t *st, Elf32_Sym *sym, char *n)
  * @strtab: symbl name lookup matching string array character field
  * @cnt: tot entry loop processing constraint calculation criteria limits
  * @size: architecture obj record structure sizing layout steps
+ * @sh: Raw pointer to base section array tracking block
  */
-void loop_syms(elf_s_t *st, void *shdr, char *strtab, int cnt, int size)
+void loop_syms(elf_s_t *st, void *shdr, char *strtab, int cnt, int size,
+	       void *sh)
 {
 	int i;
 	char *n;
@@ -64,7 +82,7 @@ void loop_syms(elf_s_t *st, void *shdr, char *strtab, int cnt, int size)
 			    (ELF64_ST_TYPE(sym->st_info) == STT_FILE) ||
 			    (ELF64_ST_TYPE(sym->st_info) == STT_SECTION))
 				continue;
-			print_64(st, sym, n);
+			print_64(st, sym, n, sh);
 		}
 		else
 		{
@@ -75,7 +93,7 @@ void loop_syms(elf_s_t *st, void *shdr, char *strtab, int cnt, int size)
 			    (ELF32_ST_TYPE(sym->st_info) == STT_FILE) ||
 			    (ELF32_ST_TYPE(sym->st_info) == STT_SECTION))
 				continue;
-			print_32(st, sym, n);
+			print_32(st, sym, n, sh);
 		}
 	}
 }

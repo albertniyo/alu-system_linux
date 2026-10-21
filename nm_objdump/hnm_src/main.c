@@ -1,56 +1,83 @@
 #include "hnm.h"
 
 /**
+ * parse_64 - helper to parse 64-bit sections
+ * @st: exec framework property memory target track definitions
+ * Return: 1 if found, 0 otherwise
+ */
+int parse_64(elf_s_t *st)
+{
+	int i, found = 0;
+	char *s_strs;
+	Elf64_Ehdr *eh = st->map;
+	Elf64_Shdr *sh = (Elf64_Shdr *)((char *)st->map +
+					s8(eh->e_shoff, st->swap));
+
+	for (i = 0; i < s2(eh->e_shnum, st->swap); i++)
+	{
+		if (s4(sh[i].sh_type, st->swap) != SHT_SYMTAB)
+			continue;
+		found = 1;
+		s_strs = (char *)st->map +
+			s8(sh[s4(sh[i].sh_link, st->swap)].sh_offset,
+			   st->swap);
+		loop_syms(st, (char *)st->map +
+			  s8(sh[i].sh_offset, st->swap), s_strs,
+			  s8(sh[i].sh_size, st->swap) /
+			  s8(sh[i].sh_entsize, st->swap),
+			  s8(sh[i].sh_entsize, st->swap), sh);
+	}
+	return (found);
+}
+
+/**
+ * parse_32 - helper to parse 32-bit sections
+ * @st: exec framework property memory target track definitions
+ * Return: 1 if found, 0 otherwise
+ */
+int parse_32(elf_s_t *st)
+{
+	int i, found = 0;
+	char *s_strs;
+	Elf32_Ehdr *eh = st->map;
+	Elf32_Shdr *sh = (Elf32_Shdr *)((char *)st->map +
+					s4(eh->e_shoff, st->swap));
+
+	for (i = 0; i < s2(eh->e_shnum, st->swap); i++)
+	{
+		if (s4(sh[i].sh_type, st->swap) != SHT_SYMTAB)
+			continue;
+		found = 1;
+		s_strs = (char *)st->map +
+			s4(sh[s4(sh[i].sh_link, st->swap)].sh_offset,
+			   st->swap);
+		loop_syms(st, (char *)st->map +
+			  s4(sh[i].sh_offset, st->swap), s_strs,
+			  s4(sh[i].sh_size, st->swap) /
+			  s4(sh[i].sh_entsize, st->swap),
+			  s4(sh[i].sh_entsize, st->swap), sh);
+	}
+	return (found);
+}
+
+/**
  * parse_sections - inspects section tables looking for active symbol entries
  * @st: exec framework property memory target track definitions
+ * @fn: dest string pointer reference array structure metrics
  * Return: status evaluation check numbers
  */
-int parse_sections(elf_s_t *st)
+int parse_sections(elf_s_t *st, const char *fn)
 {
-	int i;
-	char *s_strs;
+	int found = 0;
 
 	if (st->is_64)
-	{
-		Elf64_Ehdr *eh = st->map;
-		Elf64_Shdr *sh = (Elf64_Shdr *)((char *)st->map +
-						s8(eh->e_shoff, st->swap));
-
-		for (i = 0; i < s2(eh->e_shnum, st->swap); i++)
-		{
-			if (s4(sh[i].sh_type, st->swap) != SHT_SYMTAB)
-				continue;
-			s_strs = (char *)st->map +
-				s8(sh[s4(sh[i].sh_link, st->swap)].sh_offset,
-				   st->swap);
-			loop_syms(st, (char *)st->map +
-				  s8(sh[i].sh_offset, st->swap), s_strs,
-				  s8(sh[i].sh_size, st->swap) /
-				  s8(sh[i].sh_entsize, st->swap),
-				  s8(sh[i].sh_entsize, st->swap));
-		}
-	}
+		found = parse_64(st);
 	else
-	{
-		Elf32_Ehdr *eh = st->map;
-		Elf32_Shdr *sh = (Elf32_Shdr *)((char *)st->map +
-						s4(eh->e_shoff, st->swap));
+		found = parse_32(st);
 
-		for (i = 0; i < s2(eh->e_shnum, st->swap); i++)
-		{
-			if (s4(sh[i].sh_type, st->swap) != SHT_SYMTAB)
-				continue;
-			s_strs = (char *)st->map +
-				s4(sh[s4(sh[i].sh_link, st->swap)].sh_offset,
-				   st->swap);
-			loop_syms(st, (char *)st->map +
-				  s4(sh[i].sh_offset, st->swap), s_strs,
-				  s4(sh[i].sh_size, st->swap) /
-				  s4(sh[i].sh_entsize, st->swap),
-				  s4(sh[i].sh_entsize, st->swap));
-		}
-	}
-	return (0);
+	if (!found)
+		fprintf(stderr, "./hnm: %s: no symbols\n", fn);
+	return (!found);
 }
 
 /**
@@ -64,6 +91,7 @@ int process_file(const char *filename)
 	struct stat st;
 	elf_s_t state;
 	unsigned char *h;
+	int ret;
 
 	if (fd < 0 || fstat(fd, &st) < 0)
 		return (1);
@@ -86,9 +114,9 @@ int process_file(const char *filename)
 #else
 	state.swap = (h[EI_DATA] == ELFDATA2LSB);
 #endif
-	parse_sections(&state);
+	ret = parse_sections(&state, filename);
 	munmap(state.map, state.size);
-	return (0);
+	return (ret);
 }
 
 /**
@@ -99,7 +127,13 @@ int process_file(const char *filename)
  */
 int main(int ac, char **av)
 {
+	int i, ret = 0;
+
 	if (ac < 2)
 		return (process_file("a.out"));
-	return (process_file(av[1]));
+	for (i = 1; i < ac; i++)
+	{
+		ret |= process_file(av[i]);
+	}
+	return (ret);
 }

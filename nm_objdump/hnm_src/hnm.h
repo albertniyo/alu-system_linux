@@ -28,10 +28,12 @@ uint16_t s2(uint16_t v, int swp);
 uint32_t s4(uint32_t v, int swp);
 uint64_t s8(uint64_t v, int swp);
 
-char get_type(unsigned char b, unsigned char t, unsigned short idx, void *m);
-void loop_syms(elf_s_t *st, void *shdr, char *strtab, int cnt, int size);
+char get_type(unsigned char b, unsigned char t, unsigned short idx,
+	      uint64_t shflags, uint32_t shtype);
+void loop_syms(elf_s_t *st, void *shdr, char *strtab, int cnt, int size,
+	       void *sh);
 
-void print_64(elf_s_t *st, Elf64_Sym *sym, char *n);
-void print_32(elf_s_t *st, Elf32_Sym *sym, char *n);
+void print_64(elf_s_t *st, Elf64_Sym *sym, char *n, Elf64_Shdr *sh);
+void print_32(elf_s_t *st, Elf32_Sym *sym, char *n, Elf32_Shdr *sh);
 
-#endif
+#endif /* HNM_H */
