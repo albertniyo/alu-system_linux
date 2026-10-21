@@ -74,7 +74,9 @@ char get_type(unsigned char b, unsigned char t, unsigned short idx,
 		c = 'C';
 	else if (shtype == SHT_NOBITS)
 		c = 'B';
-	else if (shflags & SHF_EXECINSTR)
+	else if ((shflags & SHF_EXECINSTR) ||
+		 shtype == SHT_INIT_ARRAY ||
+		 shtype == SHT_FINI_ARRAY)
 		c = 'T';
 	else if (!(shflags & SHF_WRITE) && (shflags & SHF_ALLOC))
 		c = 'R';
