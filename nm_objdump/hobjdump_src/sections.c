@@ -6,12 +6,17 @@
  * @addr: mem address translation
  * @i: curr absolute loop row offset position
  * @sz: max tracking section boundaries size
+ * @is_64: architecture bit width indicator
  */
-void print_hex_row(unsigned char *sect, uint64_t addr, uint64_t i, uint64_t sz)
+void print_hex_row(unsigned char *sect, uint64_t addr, uint64_t i,
+		   uint64_t sz, int is_64)
 {
 	uint64_t j;
 
-	printf(" %04lx ", (unsigned long)(addr + i));
+	if (is_64)
+		printf(" %016lx ", (unsigned long)(addr + i));
+	else
+		printf(" %08lx ", (unsigned long)(addr + i));
 	for (j = 0; j < 16; j++)
 	{
 		if (i + j < sz)
@@ -42,15 +47,79 @@ void print_hex_row(unsigned char *sect, uint64_t addr, uint64_t i, uint64_t sz)
  * @sect: raw payload source byte context address pointers
  * @addr: translated file entry address boundaries
  * @sz: tot active footprint data widths metric count sizing limits
+ * @is_64: architecture bit width indicator
  */
-void dump_section(const char *name, void *sect, uint64_t addr, uint64_t sz)
+void dump_section(const char *name, void *sect, uint64_t addr,
+		  uint64_t sz, int is_64)
 {
 	uint64_t i;
 
 	printf("Contents of section %s:\n", name);
 	for (i = 0; i < sz; i += 16)
 	{
-		print_hex_row(sect, addr, i, sz);
+		print_hex_row(sect, addr, i, sz, is_64);
+	}
+}
+
+/**
+ * print_sections_64 - loop through sections for 64-bit ELF binaries
+ * @st: curr architecture structure metadata tracking wrapper layout
+ */
+static void print_sections_64(elf_s_t *st)
+{
+	int i;
+	char *shstr, *name;
+	Elf64_Ehdr *eh = st->map;
+	Elf64_Shdr *sh = (Elf64_Shdr *)((char *)st->map +
+					s8(eh->e_shoff, st->swap));
+
+	shstr = (char *)st->map +
+		s8(sh[s2(eh->e_shstrndx, st->swap)].sh_offset, st->swap);
+	for (i = 0; i < s2(eh->e_shnum, st->swap); i++)
+	{
+		name = shstr + s4(sh[i].sh_name, st->swap);
+		if (s4(sh[i].sh_type, st->swap) == SHT_NOBITS ||
+		    !(s8(sh[i].sh_flags, st->swap) & SHF_ALLOC) ||
+		    s8(sh[i].sh_size, st->swap) == 0 ||
+		    *name == '\0' || strcmp(name, ".strtab") == 0 ||
+		    strcmp(name, ".symtab") == 0 ||
+		    strcmp(name, ".shstrtab") == 0)
+			continue;
+		dump_section(name, (char *)st->map +
+			     s8(sh[i].sh_offset, st->swap),
+			     s8(sh[i].sh_addr, st->swap),
+			     s8(sh[i].sh_size, st->swap), st->is_64);
+	}
+}
+
+/**
+ * print_sections_32 - loop through sections for 32-bit ELF binaries
+ * @st: curr architecture structure metadata tracking wrapper layout
+ */
+static void print_sections_32(elf_s_t *st)
+{
+	int i;
+	char *shstr, *name;
+	Elf32_Ehdr *eh = st->map;
+	Elf32_Shdr *sh = (Elf32_Shdr *)((char *)st->map +
+					s4(eh->e_shoff, st->swap));
+
+	shstr = (char *)st->map +
+		s4(sh[s2(eh->e_shstrndx, st->swap)].sh_offset, st->swap);
+	for (i = 0; i < s2(eh->e_shnum, st->swap); i++)
+	{
+		name = shstr + s4(sh[i].sh_name, st->swap);
+		if (s4(sh[i].sh_type, st->swap) == SHT_NOBITS ||
+		    !(s4(sh[i].sh_flags, st->swap) & SHF_ALLOC) ||
+		    s4(sh[i].sh_size, st->swap) == 0 ||
+		    *name == '\0' || strcmp(name, ".strtab") == 0 ||
+		    strcmp(name, ".symtab") == 0 ||
+		    strcmp(name, ".shstrtab") == 0)
+			continue;
+		dump_section(name, (char *)st->map +
+			     s4(sh[i].sh_offset, st->swap),
+			     s4(sh[i].sh_addr, st->swap),
+			     s4(sh[i].sh_size, st->swap), st->is_64);
 	}
 }
 
@@ -60,45 +129,8 @@ void dump_section(const char *name, void *sect, uint64_t addr, uint64_t sz)
  */
 void print_sections(elf_s_t *st)
 {
-	int i;
-	char *shstr, *name;
-
 	if (st->is_64)
-	{
-		Elf64_Ehdr *eh = st->map;
-		Elf64_Shdr *sh = (Elf64_Shdr *)((char *)st->map + s8(eh->e_shoff, st->swap));
-
-		shstr = (char *)st->map + s8(sh[s2(eh->e_shstrndx, st->swap)].sh_offset, st->swap);
-		for (i = 0; i < s2(eh->e_shnum, st->swap); i++)
-		{
-			name = shstr + s4(sh[i].sh_name, st->swap);
-			if (s4(sh[i].sh_type, st->swap) == SHT_NOBITS ||
-			    !(s8(sh[i].sh_flags, st->swap) & SHF_ALLOC) ||
-			    s8(sh[i].sh_size, st->swap) == 0 ||
-			    *name == '\0' || strcmp(name, ".strtab") == 0 ||
-			    strcmp(name, ".symtab") == 0 || strcmp(name, ".shstrtab") == 0)
-				continue;
-			dump_section(name, (char *)st->map + s8(sh[i].sh_offset, st->swap),
-				     s8(sh[i].sh_addr, st->swap), s8(sh[i].sh_size, st->swap));
-		}
-	}
+		print_sections_64(st);
 	else
-	{
-		Elf32_Ehdr *eh = st->map;
-		Elf32_Shdr *sh = (Elf32_Shdr *)((char *)st->map + s4(eh->e_shoff, st->swap));
-
-		shstr = (char *)st->map + s4(sh[s2(eh->e_shstrndx, st->swap)].sh_offset, st->swap);
-		for (i = 0; i < s2(eh->e_shnum, st->swap); i++)
-		{
-			name = shstr + s4(sh[i].sh_name, st->swap);
-			if (s4(sh[i].sh_type, st->swap) == SHT_NOBITS ||
-			    !(s4(sh[i].sh_flags, st->swap) & SHF_ALLOC) ||
-			    s4(sh[i].sh_size, st->swap) == 0 ||
-			    *name == '\0' || strcmp(name, ".strtab") == 0 ||
-			    strcmp(name, ".symtab") == 0 || strcmp(name, ".shstrtab") == 0)
-				continue;
-			dump_section(name, (char *)st->map + s4(sh[i].sh_offset, st->swap),
-				     s4(sh[i].sh_addr, st->swap), s4(sh[i].sh_size, st->swap));
-		}
-	}
+		print_sections_32(st);
 }

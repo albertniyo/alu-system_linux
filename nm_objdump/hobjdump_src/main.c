@@ -7,15 +7,19 @@
  */
 void print_header(elf_s_t *st, const char *fn)
 {
-	printf("\n%s:     file format %s\n", fn, st->is_64 ? "elf64-x86-64" : "elf32-i386");
-	printf("architecture: %s, flags 0x00000112:\n", st->is_64 ? "i386:x86-64" : "i386");
+	printf("\n%s:     file format %s\n", fn,
+	       st->is_64 ? "elf64-x86-64" : "elf32-i386");
+	printf("architecture: %s, flags 0x00000112:\n",
+	       st->is_64 ? "i386:x86-64" : "i386");
 	printf("EXEC_P, HAS_SYMS, D_PAGED\n");
 	if (st->is_64)
 		printf("start address 0x%016lx\n\n",
-		       (unsigned long)s8(((Elf64_Ehdr *)st->map)->e_entry, st->swap));
+		       (unsigned long)s8(((Elf64_Ehdr *)st->map)->e_entry,
+					 st->swap));
 	else
 		printf("start address 0x%08lx\n\n",
-		       (unsigned long)s4(((Elf32_Ehdr *)st->map)->e_entry, st->swap));
+		       (unsigned long)s4(((Elf32_Ehdr *)st->map)->e_entry,
+					 st->swap));
 }
 
 /**
@@ -41,7 +45,8 @@ int process_file(const char *filename)
 	if (h[EI_MAG0] != 0x7f || h[EI_MAG1] != 'E' ||
 	    h[EI_MAG2] != 'L' || h[EI_MAG3] != 'F')
 	{
-		fprintf(stderr, "hobjdump: %s: File format not recognized\n", filename);
+		fprintf(stderr, "hobjdump: %s: File format not recognized\n",
+			filename);
 		munmap(state.map, state.size);
 		return (1);
 	}
