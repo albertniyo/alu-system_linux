@@ -14,7 +14,7 @@
  * struct elf_s - state tracker for target ELF binaries
  * @map: mem pointer to the raw mapped binary file bytes
  * @size: tot byte size of the mapped target binary file
- * @is_64: bool indicating architecture layout width (as 1 if 64-bit, 0 if 32)
+ * @is_64: bool indicating architecture layout width (1 if 64-bit, 0 if 32)
  * @swap: bool indicating endian byte swapping necessity flags
  */
 typedef struct elf_s
