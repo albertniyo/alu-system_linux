@@ -16,7 +16,7 @@ void print_hex_row(unsigned char *sect, uint64_t addr, uint64_t i,
 	if (is_64)
 		printf(" %016lx ", (unsigned long)(addr + i));
 	else
-		printf("%08lx ", (unsigned long)(addr + i));
+		printf(" %04lx ", (unsigned long)(addr + i));
 	for (j = 0; j < 16; j++)
 	{
 		if (i + j < sz)
