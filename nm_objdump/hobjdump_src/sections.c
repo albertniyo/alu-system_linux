@@ -81,9 +81,7 @@ static void print_sections_64(elf_s_t *st)
 		if (s4(sh[i].sh_type, st->swap) == SHT_NOBITS ||
 		    !(s8(sh[i].sh_flags, st->swap) & SHF_ALLOC) ||
 		    s8(sh[i].sh_size, st->swap) == 0 ||
-		    *name == '\0' || strcmp(name, ".strtab") == 0 ||
-		    strcmp(name, ".symtab") == 0 ||
-		    strcmp(name, ".shstrtab") == 0)
+		    *name == '\0')
 			continue;
 		dump_section(name, (char *)st->map +
 			     s8(sh[i].sh_offset, st->swap),
@@ -112,9 +110,7 @@ static void print_sections_32(elf_s_t *st)
 		if (s4(sh[i].sh_type, st->swap) == SHT_NOBITS ||
 		    !(s4(sh[i].sh_flags, st->swap) & SHF_ALLOC) ||
 		    s4(sh[i].sh_size, st->swap) == 0 ||
-		    *name == '\0' || strcmp(name, ".strtab") == 0 ||
-		    strcmp(name, ".symtab") == 0 ||
-		    strcmp(name, ".shstrtab") == 0)
+		    *name == '\0')
 			continue;
 		dump_section(name, (char *)st->map +
 			     s4(sh[i].sh_offset, st->swap),
