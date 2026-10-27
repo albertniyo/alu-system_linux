@@ -7,10 +7,33 @@
  */
 void print_header(elf_s_t *st, const char *fn)
 {
-	printf("\n%s:     file format %s\n", fn,
-	       st->is_64 ? "elf64-x86-64" : "elf32-i386");
-	printf("architecture: %s, flags 0x00000112:\n",
-	       st->is_64 ? "i386:x86-64" : "i386");
+	const char *fmt = "elf32-i386", *arch = "i386";
+	uint16_t mach = 0;
+
+	if (st->is_64)
+	{
+		Elf64_Ehdr *eh = st->map;
+
+		mach = s2(eh->e_machine, st->swap);
+		if (mach == EM_X86_64)
+		{
+			fmt = "elf64-x86-64";
+			arch = "i386:x86-64";
+		}
+	}
+	else
+	{
+		Elf32_Ehdr *eh = st->map;
+
+		mach = s2(eh->e_machine, st->swap);
+		if (mach == 2 || mach == 18)
+		{
+			fmt = "elf32-sparc";
+			arch = "sparc";
+		}
+	}
+	printf("\n%s:     file format %s\n", fn, fmt);
+	printf("architecture: %s, flags 0x00000112:\n", arch);
 	printf("EXEC_P, HAS_SYMS, D_PAGED\n");
 	if (st->is_64)
 		printf("start address 0x%016lx\n\n",
