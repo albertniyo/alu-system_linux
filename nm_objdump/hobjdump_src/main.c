@@ -15,11 +15,8 @@ void print_header(elf_s_t *st, const char *fn)
 		Elf64_Ehdr *eh = st->map;
 
 		mach = s2(eh->e_machine, st->swap);
-		if (mach == EM_X86_64)
-		{
-			fmt = "elf64-x86-64";
-			arch = "i386:x86-64";
-		}
+		fmt = "elf64-x86-64";
+		arch = "i386:x86-64";
 	}
 	else
 	{
