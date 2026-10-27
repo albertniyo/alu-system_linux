@@ -16,7 +16,7 @@ void print_hex_row(unsigned char *sect, uint64_t addr, uint64_t i,
 	if (is_64)
 		printf(" %016lx ", (unsigned long)(addr + i));
 	else
-		printf(" %07lx ", (unsigned long)(addr + i));
+		printf(" %08lx ", (unsigned long)(addr + i));
 	for (j = 0; j < 16; j++)
 	{
 		if (i + j < sz)
@@ -68,25 +68,28 @@ void dump_section(const char *name, void *sect, uint64_t addr,
 static void print_sections_64(elf_s_t *st)
 {
 	int i;
+	uint16_t shstrndx;
 	char *shstr, *name;
 	Elf64_Ehdr *eh = st->map;
 	Elf64_Shdr *sh = (Elf64_Shdr *)((char *)st->map +
 					s8(eh->e_shoff, st->swap));
 
-	shstr = (char *)st->map +
-		s8(sh[s2(eh->e_shstrndx, st->swap)].sh_offset, st->swap);
+	shstrndx = s2(eh->e_shstrndx, st->swap);
+	shstr = (char *)st->map + s8(sh[shstrndx].sh_offset, st->swap);
 	for (i = 0; i < s2(eh->e_shnum, st->swap); i++)
 	{
+		uint32_t type = s4(sh[i].sh_type, st->swap);
+		uint64_t flags = s8(sh[i].sh_flags, st->swap);
+		uint64_t size = s8(sh[i].sh_size, st->swap);
+		uint64_t offset = s8(sh[i].sh_offset, st->swap);
+		uint64_t addr = s8(sh[i].sh_addr, st->swap);
+
 		name = shstr + s4(sh[i].sh_name, st->swap);
-		if (s4(sh[i].sh_type, st->swap) == SHT_NOBITS ||
-		    !(s8(sh[i].sh_flags, st->swap) & SHF_ALLOC) ||
-		    s8(sh[i].sh_size, st->swap) == 0 ||
-		    *name == '\0')
+		if (type == SHT_NOBITS || !(flags & SHF_ALLOC) ||
+		    size == 0 || *name == '\0')
 			continue;
-		dump_section(name, (char *)st->map +
-			     s8(sh[i].sh_offset, st->swap),
-			     s8(sh[i].sh_addr, st->swap),
-			     s8(sh[i].sh_size, st->swap), st->is_64);
+		dump_section(name, (char *)st->map + offset,
+			     addr, size, st->is_64);
 	}
 }
 
@@ -97,25 +100,28 @@ static void print_sections_64(elf_s_t *st)
 static void print_sections_32(elf_s_t *st)
 {
 	int i;
+	uint16_t shstrndx;
 	char *shstr, *name;
 	Elf32_Ehdr *eh = st->map;
 	Elf32_Shdr *sh = (Elf32_Shdr *)((char *)st->map +
 					s4(eh->e_shoff, st->swap));
 
-	shstr = (char *)st->map +
-		s4(sh[s2(eh->e_shstrndx, st->swap)].sh_offset, st->swap);
+	shstrndx = s2(eh->e_shstrndx, st->swap);
+	shstr = (char *)st->map + s4(sh[shstrndx].sh_offset, st->swap);
 	for (i = 0; i < s2(eh->e_shnum, st->swap); i++)
 	{
+		uint32_t type = s4(sh[i].sh_type, st->swap);
+		uint32_t flags = s4(sh[i].sh_flags, st->swap);
+		uint32_t size = s4(sh[i].sh_size, st->swap);
+		uint32_t offset = s4(sh[i].sh_offset, st->swap);
+		uint32_t addr = s4(sh[i].sh_addr, st->swap);
+
 		name = shstr + s4(sh[i].sh_name, st->swap);
-		if (s4(sh[i].sh_type, st->swap) == SHT_NOBITS ||
-		    !(s4(sh[i].sh_flags, st->swap) & SHF_ALLOC) ||
-		    s4(sh[i].sh_size, st->swap) == 0 ||
-		    *name == '\0')
+		if (type == SHT_NOBITS || !(flags & SHF_ALLOC) ||
+		    size == 0 || *name == '\0')
 			continue;
-		dump_section(name, (char *)st->map +
-			     s4(sh[i].sh_offset, st->swap),
-			     s4(sh[i].sh_addr, st->swap),
-			     s4(sh[i].sh_size, st->swap), st->is_64);
+		dump_section(name, (char *)st->map + offset,
+			     addr, size, st->is_64);
 	}
 }
 
