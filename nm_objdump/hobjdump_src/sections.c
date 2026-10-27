@@ -7,16 +7,19 @@
  * @i: curr absolute loop row offset position
  * @sz: max tracking section boundaries size
  * @is_64: architecture bit width indicator
+ * @swap: endian byte swapping necessity flag
  */
 void print_hex_row(unsigned char *sect, uint64_t addr, uint64_t i,
-		   uint64_t sz, int is_64)
+		   uint64_t sz, int is_64, int swap)
 {
 	uint64_t j;
 
 	if (is_64)
 		printf(" %016lx ", (unsigned long)(addr + i));
-	else
+	else if (swap)
 		printf(" %08lx ", (unsigned long)(addr + i));
+	else
+		printf(" %07lx ", (unsigned long)(addr + i));
 	for (j = 0; j < 16; j++)
 	{
 		if (i + j < sz)
@@ -47,17 +50,17 @@ void print_hex_row(unsigned char *sect, uint64_t addr, uint64_t i,
  * @sect: raw payload source byte context address pointers
  * @addr: translated file entry address boundaries
  * @sz: tot active footprint data widths metric count sizing limits
- * @is_64: architecture bit width indicator
+ * @st: curr architecture structure metadata tracker layout
  */
 void dump_section(const char *name, void *sect, uint64_t addr,
-		  uint64_t sz, int is_64)
+		  uint64_t sz, elf_s_t *st)
 {
 	uint64_t i;
 
 	printf("Contents of section %s:\n", name);
 	for (i = 0; i < sz; i += 16)
 	{
-		print_hex_row(sect, addr, i, sz, is_64);
+		print_hex_row(sect, addr, i, sz, st->is_64, st->swap);
 	}
 }
 
@@ -89,7 +92,7 @@ static void print_sections_64(elf_s_t *st)
 		    size == 0 || *name == '\0')
 			continue;
 		dump_section(name, (char *)st->map + offset,
-			     addr, size, st->is_64);
+			     addr, size, st);
 	}
 }
 
@@ -121,7 +124,7 @@ static void print_sections_32(elf_s_t *st)
 		    size == 0 || *name == '\0')
 			continue;
 		dump_section(name, (char *)st->map + offset,
-			     addr, size, st->is_64);
+			     addr, size, st);
 	}
 }
 
